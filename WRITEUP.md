@@ -128,7 +128,7 @@ run yet (GPU quota). Expected effect: 0–3 outputs.
 ## Reproducibility
 
 - Code: `build_fork.py`, `harness/score.py`, `harness/nvarc_decoder.py`, `harness/dsl.py` –
-  **[TODO: public repo / Kaggle dataset link]**
+  https://github.com/Actualjudgepresident/arc2026-nvarc-harness
 - Notebooks: `vladee/nvarc-eval-s0`, `vladee/nvarc-eval-s1` – **[TODO: make public]**
 - Raw candidates: `cands_seed0.tar`, `cands_seed1.tar` (~4 MB each).
 - Rebuild: `python build_fork.py --owner <you> --seed 0`, push to Kaggle (4×L4, internet off), then
