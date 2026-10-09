@@ -1,0 +1,7 @@
+data/
+kernels/
+nb/
+harness/nvarc_decoder.py
+__pycache__/
+.venv/
+*.bak*
