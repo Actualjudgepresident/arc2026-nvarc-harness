@@ -22,16 +22,19 @@ Main findings:
    solve partly different tasks: the union of their top-2 attempts reaches 31.39%. Public reruns of the
    identical notebook range from 26.9 to 33.9 on the leaderboard. Leaderboard differences of 1–2 points
    between NVARC variants are mostly noise.
-2. **~8 points are lost in selection, but they cannot be recovered by re-weighting.** In 15 outputs the
-   correct grid was generated but not ranked in the top two. In most of these the correct grid has
-   *worse* augmentation-consistency scores than the chosen ones. We searched 192 ranking formulas
-   (candidate count, mean/median/min augmented NLL, beam score); the best gained a net 2 outputs
-   in-sample (29.31% vs. 28.47%), which is not distinguishable from noise. NVARC's `score_kgmon` is
-   effectively optimal over the features the pipeline produces.
-3. **Pooling seeds raises coverage much more than score.** Pooling two seeds lifts the oracle by 4.2
-   points but the selected score by only 1.0. Extra samples from the same model mostly add more
-   confident wrong answers alongside the new correct ones.
-4. **A fixed set of tasks is out of reach.** The same 8 tasks hit the 20-minute per-task cap in both
+2. **NVARC knows *which* outputs it has solved.** Its own selection score separates correct from wrong
+   top-1 answers with AUC 0.83 (both seeds). The least-confident fifth of outputs is 0% correct, the most
+   confident fifth ~60%.
+3. **The ~8 points lost in selection are sampling noise in low-confidence outputs, not a stable bias.**
+   In 15 outputs the correct grid was generated but out-ranked. There the winner came from only 1–8
+   augmented views and the truth from 1–4. The winning wrong grid recurs as the other seed's top-1 in
+   just 2/15 cases. A search over 192 re-weighting formulas gains a net 2 outputs in-sample, i.e. noise:
+   no re-weighting of noisy evidence can fix this.
+4. **Extra compute helps only where confidence is low.** Pooling a second seed on *all* outputs adds
+   1.0 point; pooling it only on the least-confident half adds 2.1 (30.56%), because on confident
+   outputs the second run mostly injects competing wrong candidates. (The 50% cut was chosen post hoc on
+   172 outputs – a hypothesis, not a validated gain.)
+5. **A fixed set of tasks is out of reach.** The same 8 tasks hit the 20-minute per-task cap in both
    seeds (all large ~30×30 outputs with nearly all-distinct candidates, i.e. the model is guessing). Of
    the 10 outputs with zero candidates in seed 0, 8 are also empty in seed 1.
 
@@ -85,16 +88,29 @@ set as a valid proxy.
 
 ## Why it behaves this way (theory)
 
-NVARC's selection rule rewards answers that are produced *often* and that are *stable under
-augmentation*. That is the right signal when the model has understood the rule, because the right answer
-then dominates every view. On the tasks NVARC misses, the model has usually learned a near-miss rule
-that is *also* stable under augmentation: a consistent wrong answer looks just like a consistent right
-one. More samples from the same model therefore add confident wrong candidates along with the occasional
-right one, which is why pooling raises the oracle far more than the score.
+All numbers below come from `harness/theory.py` on the two seed runs (`runs/theory_report.json`).
 
-Breaking this needs evidence the model does not already produce: a verifier that is independent of the
-generator (e.g. executable programs checked against the train pairs), or a model that understands more
-rules. Re-weighting the existing scores cannot do it.
+**1. The confidence signal is real.** `score_kgmon` (views producing the grid minus mean augmented NLL)
+is a well-calibrated confidence: AUC 0.83 for "top-1 is correct", accuracy rising from 0% to ~60% across
+confidence quintiles. Correct top-1 answers are produced by a median of 8–9 views, wrong ones by 2–3.
+When the model has understood a rule, the right answer dominates every view.
+
+**2. Errors come in two kinds.** Where both seeds' top-1 answers are wrong (109 outputs), 33% are the
+*identical* wrong grid – a reproducible misreading of the rule that more sampling cannot fix – and 67%
+differ, i.e. guessing. Of the right-shape wrong answers, 59/107 differ from the truth in at most 10% of
+cells (17 in at most 2%): many failures are near-misses on a mostly understood rule.
+
+**3. Lost-in-selection = low evidence.** The outputs where the truth is generated but out-ranked are
+exactly the low-confidence ones: a handful of views on each side, and the winner does not reproduce
+across seeds (2/15). The ranking is not biased; the evidence is just too thin to rank on. That is why
+192 re-weightings fail, and why pooling a second run helps only where evidence was thin.
+
+**Implications.** (a) Compute should be allocated by confidence: re-run or widen the search only on
+low-confidence outputs, since confident outputs are mostly right already and only lose from extra noise.
+(b) The reproducible-misreading errors (a third of shared errors) need evidence the model does not
+produce itself – e.g. an independent verifier such as executable programs checked against the train
+pairs, or a stronger model. (c) Near-misses suggest local repair (editing a few cells of a high-confidence
+candidate) as a cheap target.
 
 ## Things that did not work
 
@@ -121,7 +137,8 @@ run yet (GPU quota). Expected effect: 0–3 outputs.
 - **Progress:** the main value is negative results with numbers attached. Selection tuning and seed
   pooling are near their ceiling for this model; gains must come from a stronger generator or an
   independent verifier.
-- **Theory:** see "Why it behaves this way".
+- **Theory:** measured, not asserted: calibration (AUC 0.83), error reproducibility across seeds (33%
+  identical), near-miss structure, and the low-evidence nature of selection losses.
 - **Completeness:** all code, both runs' raw candidates and logs will be released (see below).
 - **Novelty:** low. The method is NVARC; the contribution is measurement.
 

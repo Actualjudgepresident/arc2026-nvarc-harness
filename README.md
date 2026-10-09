@@ -17,6 +17,7 @@ Public leaderboard for seed 0: 27.64.
 |---|---|
 | `build_fork.py` | Builds our Kaggle notebook from the upstream NVARC notebook via exact, asserted string patches (run all 120 eval tasks, seed offset, raw-candidate export, fallback for empty attempt slots). |
 | `harness/score.py` | CPU scorer. `sub`: exact competition metric + union across submissions. `cands`: coverage, oracle and selection accuracy per run and pooled. |
+| `harness/theory.py` | Calibration, error reproducibility across seeds, near-miss and low-evidence analysis behind the writeup's theory section. |
 | `harness/dsl.py` | Small CPU program search (depth-2 grid transforms). Negative result: 0/120 eval. |
 | `runs/s0`, `runs/s1` | Raw candidates (`cands_seedN.tar`), eval submissions and Kaggle logs of our two runs. |
 | `fetch_upstream.sh` | Downloads the inputs we do not redistribute (competition data, upstream notebook, NVARC's `arc_decoder.py`). |
